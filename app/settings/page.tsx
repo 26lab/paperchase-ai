@@ -3,6 +3,7 @@
 import { RotateCcw } from "lucide-react";
 import { PageHeader, Panel } from "@/components/page-header";
 import { Button, cx } from "@/components/ui";
+import { UpdatePanel } from "@/components/update-panel";
 import { useToast } from "@/lib/toast";
 import { defaultLayout, TILES } from "@/lib/tiles";
 import { useSavedLayout } from "@/lib/use-saved-layout";
@@ -44,6 +45,9 @@ export default function SettingsPage() {
           Layout zurücksetzen
         </Button>
       </Panel>
+      <div className="mt-4">
+        <UpdatePanel />
+      </div>
     </div>
   );
 }

@@ -44,6 +44,28 @@ npm run dist       # check + build + NSIS-Installer nach release/
 
 Bridge neu bauen: `..\atas-mcp\build-deploy.ps1`, dann `ATAS.McpBridge.dll` nach `resources/bridge/` kopieren.
 
+```bash
+npm run backtest   # EMA 9/21-Strategie über die Kerzen, die die Bridge gerade hält
+```
+
+## Releases & Auto-Update
+
+Die App prüft beim Start GitHub Releases von **26lab/paperchase-ai**, lädt Updates im Hintergrund und installiert
+beim nächsten Neustart (oder per Klick in Einstellungen / Banner). Updates behalten Bridge-DLL und Claude-Registrierung.
+
+1. Repo `26lab/paperchase-ai` auf GitHub anlegen (privat geht, dann braucht die App zum Lesen ebenfalls ein Token – öffentlich ist einfacher).
+2. `version` in `package.json` erhöhen.
+3. GitHub-Token mit `repo`-Rechten setzen und veröffentlichen:
+   ```powershell
+   $env:GH_TOKEN = "<token>"
+   npm run release
+   ```
+
+## Code-Signing
+
+Aktuell unsigniert (SmartScreen: „Weitere Informationen → Trotzdem ausführen“). electron-builder signiert automatisch,
+sobald `CSC_LINK` (Pfad/Base64 der .pfx) und `CSC_KEY_PASSWORD` gesetzt sind – oder `win.azureSignOptions` für Azure Trusted Signing.
+
 ## Aufbau
 
 | Ordner | Inhalt |

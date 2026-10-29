@@ -45,7 +45,7 @@ export function CheckList() {
           <div className="min-w-0 flex-1">
             <div className="font-semibold">
               {check.label}
-              {check.blocking && check.state === "error" && <span className="ml-2 text-xs font-normal text-down">erforderlich</span>}
+              {check.blocking && check.state === "error" && <span className="ml-2 text-xs font-normal text-down"> · erforderlich</span>}
             </div>
             <div className="truncate text-sm text-muted" title={check.detail}>
               {check.detail}

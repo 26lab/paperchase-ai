@@ -5,6 +5,7 @@ import { BridgeClient } from "../shared/bridge-client";
 import { IPC_CHANNEL, type IpcMethod } from "../shared/ipc";
 import { createHandlers } from "./handlers";
 import { defaultAtasExe, installedDllPath, type PreflightEnv } from "./preflight";
+import { startAutoUpdate } from "./updater";
 
 const DEV_URL = process.env.PAPERCHASE_DEV_URL;
 const resourcesDir = app.isPackaged ? process.resourcesPath : join(app.getAppPath(), "resources");
@@ -64,6 +65,7 @@ app.on("ready", () => {
     return handler ? handler(...args) : { ok: false, error: `Unbekannte Aktion: ${method}` };
   });
   createWindow();
+  startAutoUpdate();
 });
 
 app.on("window-all-closed", () => app.quit());

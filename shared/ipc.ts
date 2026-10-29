@@ -1,6 +1,7 @@
 // Contract between the renderer (window.paperchase) and the Electron main process.
 import type { CheckResult, CheckState, FixId } from "../electron/preflight";
 import type { SavedLayout } from "../electron/layout-store";
+import type { UpdateState } from "../electron/updater";
 import type { JournalEntry } from "./journal";
 import type { OrderRequest, OrderResult, ReadEndpoint, ReadResults } from "./types";
 
@@ -20,9 +21,12 @@ export interface PaperChaseApi {
   saveLayout(layout: SavedLayout): Promise<Result<null>>;
   journal(): Promise<Result<JournalEntry[]>>;
   mcpCommand(): Promise<Result<string>>;
+  updateState(): Promise<Result<UpdateState>>;
+  checkForUpdates(): Promise<Result<UpdateState>>;
+  installUpdate(): Promise<Result<null>>;
 }
 
-export type { CheckResult, CheckState, FixId, SavedLayout, JournalEntry };
+export type { CheckResult, CheckState, FixId, SavedLayout, JournalEntry, UpdateState };
 
 export const IPC_CHANNEL = "paperchase";
 export type IpcMethod = keyof PaperChaseApi;

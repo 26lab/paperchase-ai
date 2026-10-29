@@ -6,6 +6,7 @@
   "author": "26lab",
   "license": "UNLICENSED",
   "private": true,
+  "repository": "github:26lab/paperchase-ai",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "node scripts/dev.mjs",
@@ -16,10 +17,19 @@
     "test": "vitest run",
     "check": "npm run lint && npm run typecheck && npm test",
     "backtest": "esbuild scripts/backtest.ts --bundle --platform=node --format=esm --outfile=dist-electron/backtest.mjs --log-level=warning && node dist-electron/backtest.mjs",
-    "dist": "npm run check && npm run build && electron-builder --win nsis"
+    "dist": "npm run check && npm run build && electron-builder --win nsis",
+    "release": "npm run check && npm run build && electron-builder --win nsis --publish always"
   },
   "build": {
     "appId": "io.26lab.paperchase",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "26lab",
+        "repo": "paperchase-ai",
+        "releaseType": "release"
+      }
+    ],
     "productName": "PaperChase AI",
     "directories": {
       "output": "release"
@@ -59,6 +69,7 @@
     "@types/react-dom": "^19.3.0",
     "electron": "^45.1.0",
     "electron-builder": "^26.18.0",
+    "electron-updater": "^6.8.11",
     "esbuild": "^0.28.2",
     "lightweight-charts": "^5.2.1",
     "lucide-react": "^1.64.0",

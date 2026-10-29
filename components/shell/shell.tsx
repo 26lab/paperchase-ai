@@ -3,9 +3,10 @@
 import { AnimatePresence, motion } from "motion/react";
 import { usePathname } from "next/navigation";
 import { useSyncExternalStore, type ReactNode } from "react";
-import { inApp } from "@/lib/api";
+import { api, inApp } from "@/lib/api";
 import { useBridge } from "@/lib/bridge-data";
 import { usePreflight } from "@/lib/preflight";
+import { useUpdate } from "@/lib/use-update";
 import { CheckList } from "../check-list";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
@@ -31,6 +32,16 @@ function SetupAssistant() {
 
 function Banner() {
   const { risk } = useBridge();
+  const update = useUpdate();
+  if (update.status === "ready")
+    return (
+      <div className="flex items-center gap-3 bg-up/10 px-5 py-1.5 text-sm font-semibold text-up">
+        Update v{update.available} ist bereit.
+        <button type="button" onClick={() => void api().installUpdate()} className="rounded-lg border border-up/40 px-2.5 py-0.5 text-xs hover:bg-up/15">
+          Neu starten & installieren
+        </button>
+      </div>
+    );
   if (risk?.killSwitch) return <div className="bg-down/15 px-5 py-2 text-sm font-semibold text-down">Not-Aus aktiv: {risk.killReason || "manuell"} – neue Positionen sind gesperrt.</div>;
   if (!risk?.isRealAccount) return null;
   return (

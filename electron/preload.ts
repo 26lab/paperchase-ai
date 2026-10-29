@@ -4,6 +4,7 @@ import { IPC_CHANNEL, type IpcMethod, type PaperChaseApi } from "../shared/ipc";
 const methods: IpcMethod[] = [
   "read", "placeOrder", "cancelOrder", "cancelAll", "closePosition", "kill",
   "preflight", "fix", "loadLayout", "saveLayout", "journal", "mcpCommand",
+  "updateState", "checkForUpdates", "installUpdate",
 ];
 
 const api = Object.fromEntries(

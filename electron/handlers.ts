@@ -7,6 +7,7 @@ import { READ_ENDPOINTS } from "../shared/types";
 import { createFixes } from "./fixes";
 import { loadLayout, saveLayout } from "./layout-store";
 import { runPreflight, type FixId, type PreflightEnv } from "./preflight";
+import { checkForUpdates, installUpdate, updateState } from "./updater";
 
 export type Handlers = Record<IpcMethod, (...args: unknown[]) => Promise<Result<unknown>>>;
 
@@ -60,5 +61,8 @@ export function createHandlers(env: PreflightEnv, bridge: BridgeClient, layoutFi
     saveLayout: (layout) => wrap(() => saveLayout(layoutFile(), layout).then(() => null)),
     journal: () => wrap(() => readJournal()),
     mcpCommand: () => wrap(() => mcpCommand),
+    updateState: () => wrap(() => updateState()),
+    checkForUpdates: () => wrap(() => checkForUpdates()),
+    installUpdate: () => wrap(() => (installUpdate(), null)),
   };
 }
