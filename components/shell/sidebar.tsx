@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, Bot, LayoutDashboard, ListOrdered, Settings, ShieldCheck } from "lucide-react";
+import { Activity, Bot, LayoutDashboard, ListOrdered, Radar, Settings, ShieldCheck } from "lucide-react";
 import { motion } from "motion/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -12,6 +12,7 @@ import { Badge, cx, Dot } from "../ui";
 export const NAV = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/orders/", label: "Orders & Historie", icon: ListOrdered },
+  { href: "/bot/", label: "Bot", icon: Radar },
   { href: "/claude/", label: "Claude", icon: Bot },
   { href: "/safety/", label: "Sicherheit", icon: ShieldCheck },
   { href: "/system/", label: "System-Check", icon: Activity },

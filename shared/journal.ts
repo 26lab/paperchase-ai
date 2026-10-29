@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 
 export interface JournalEntry {
   time: string;
-  source: "claude" | "app";
+  source: "claude" | "app" | "bot";
   action: string;
   detail: string;
   ok: boolean;

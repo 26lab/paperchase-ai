@@ -6,6 +6,8 @@ import { IPC_CHANNEL, type IpcMethod } from "../shared/ipc";
 import { createHandlers } from "./handlers";
 import { defaultAtasExe, installedDllPath, type PreflightEnv } from "./preflight";
 import { startAutoUpdate } from "./updater";
+import { TradingBot } from "./bot/bot";
+import { keepRunningInTray } from "./tray";
 
 const DEV_URL = process.env.PAPERCHASE_DEV_URL;
 const resourcesDir = app.isPackaged ? process.resourcesPath : join(app.getAppPath(), "resources");
@@ -20,7 +22,9 @@ const env: PreflightEnv = {
   mcpName: "paperchase",
   mcpCommand: { exe: process.execPath, args: [mcpScript] },
 };
-const handlers = createHandlers(env, new BridgeClient(), () => join(app.getPath("userData"), "layout.json"));
+const bridge = new BridgeClient();
+const bot = new TradingBot(bridge, join(app.getPath("userData"), "bot.json"));
+const handlers = createHandlers(env, bridge, () => join(app.getPath("userData"), "layout.json"), bot);
 
 protocol.registerSchemesAsPrivileged([{ scheme: "app", privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
 
@@ -33,7 +37,7 @@ function serveRenderer(request: Request): Promise<Response> {
   return net.fetch(pathToFileURL(file).toString()).catch(() => new Response("Not found", { status: 404 }));
 }
 
-function createWindow(): void {
+function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
     width: 1480,
     height: 920,
@@ -56,6 +60,7 @@ function createWindow(): void {
     if (!url.startsWith(DEV_URL ?? "app://")) event.preventDefault();
   });
   void win.loadURL(DEV_URL ?? "app://local/");
+  return win;
 }
 
 app.on("ready", () => {
@@ -64,8 +69,10 @@ app.on("ready", () => {
     const handler = Object.hasOwn(handlers, method) ? handlers[method as IpcMethod] : undefined;
     return handler ? handler(...args) : { ok: false, error: `Unbekannte Aktion: ${method}` };
   });
-  createWindow();
+  void bot.init();
+  keepRunningInTray(createWindow(), bot, join(resourcesDir, "icon.png"));
   startAutoUpdate();
 });
 
+app.on("before-quit", () => void bot.stop("App beendet"));
 app.on("window-all-closed", () => app.quit());

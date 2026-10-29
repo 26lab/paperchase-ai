@@ -8,6 +8,7 @@ import { createFixes } from "./fixes";
 import { loadLayout, saveLayout } from "./layout-store";
 import { runPreflight, type FixId, type PreflightEnv } from "./preflight";
 import { checkForUpdates, installUpdate, updateState } from "./updater";
+import { botHandlers, type TradingBot } from "./bot/bot-handlers";
 
 export type Handlers = Record<IpcMethod, (...args: unknown[]) => Promise<Result<unknown>>>;
 
@@ -38,7 +39,7 @@ const orderSchema = z.object({
   comment: z.string().max(60).optional(),
 });
 
-export function createHandlers(env: PreflightEnv, bridge: BridgeClient, layoutFile: () => string): Handlers {
+export function createHandlers(env: PreflightEnv, bridge: BridgeClient, layoutFile: () => string, bot: TradingBot): Handlers {
   const fixes = createFixes(env);
   const fixIds = z.enum(Object.keys(fixes) as [FixId, ...FixId[]]);
   const mcpCommand = `claude mcp add ${env.mcpName} --scope user -e ELECTRON_RUN_AS_NODE=1 -- ${[env.mcpCommand.exe, ...env.mcpCommand.args].map((p) => `"${p}"`).join(" ")}`;
@@ -64,5 +65,6 @@ export function createHandlers(env: PreflightEnv, bridge: BridgeClient, layoutFi
     updateState: () => wrap(() => updateState()),
     checkForUpdates: () => wrap(() => checkForUpdates()),
     installUpdate: () => wrap(() => (installUpdate(), null)),
+    ...botHandlers(bot, wrap),
   };
 }

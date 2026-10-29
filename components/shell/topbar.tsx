@@ -1,7 +1,9 @@
 "use client";
 
-import { OctagonX } from "lucide-react";
+import { OctagonX, Radar } from "lucide-react";
+import Link from "next/link";
 import { useActions } from "@/lib/actions";
+import { useBot } from "@/lib/use-bot";
 import { useBridge } from "@/lib/bridge-data";
 import { num, priceDigits, usd } from "@/lib/format";
 import { Badge, Button, cx, pnlText } from "../ui";
@@ -9,6 +11,7 @@ import { Badge, Button, cx, pnlText } from "../ui";
 export function Topbar() {
   const { quote, status, risk, connected } = useBridge();
   const { kill } = useActions();
+  const bot = useBot();
   const digits = priceDigits(quote?.tickSize ?? 0.25);
 
   return (
@@ -24,6 +27,12 @@ export function Topbar() {
       <span className="tabular text-lg">{num(quote?.last, digits)}</span>
       {risk && (risk.isRealAccount ? <Badge tone="amber">LIVE · {risk.account}</Badge> : <Badge tone="up">DEMO · {risk.account}</Badge>)}
       <span className={cx("tabular ml-3 text-sm", pnlText(risk?.dayPnL))}>Tag {usd(risk?.dayPnL)}</span>
+      {bot.running && (
+        <Link href="/bot/" className="no-drag ml-2 flex items-center gap-1.5 rounded-lg bg-amber/10 px-2 py-1 text-xs font-bold text-amber hover:bg-amber/20">
+          <Radar className="size-3.5 animate-pulse" aria-hidden />
+          Bot läuft
+        </Link>
+      )}
       <div className="flex-1" />
       <Button
         variant={risk?.killSwitch ? "sell" : "danger"}
