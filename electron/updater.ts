@@ -3,6 +3,8 @@
 import { app } from "electron";
 import { autoUpdater } from "electron-updater";
 
+const RECHECK_MS = 4 * 60 * 60 * 1000;
+
 export interface UpdateState {
   status: "dev" | "idle" | "checking" | "downloading" | "ready" | "current" | "error";
   version: string;
@@ -33,6 +35,8 @@ export function startAutoUpdate(): void {
     }),
   );
   void checkForUpdates();
+  // The app often runs for days (bot in the tray), so a start-up check alone would miss releases.
+  setInterval(() => void checkForUpdates(), RECHECK_MS);
 }
 
 export async function checkForUpdates(): Promise<UpdateState> {
