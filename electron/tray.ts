@@ -1,11 +1,17 @@
 // While the bot runs, closing the window hides it to the tray instead of quitting.
-import { app, Menu, Tray, type BrowserWindow } from "electron";
+import { app, Menu, nativeImage, Tray, type BrowserWindow } from "electron";
 import type { TradingBot } from "./bot/bot";
 
 let quitting = false;
 
 export function keepRunningInTray(win: BrowserWindow, bot: TradingBot, iconPath: string): void {
-  const tray = new Tray(iconPath);
+  const icon = nativeImage.createFromPath(iconPath);
+  // Without an icon there is no tray to reopen a hidden window from, so closing simply quits.
+  if (icon.isEmpty()) {
+    console.error(`tray: icon missing at ${iconPath}`);
+    return;
+  }
+  const tray = new Tray(icon);
   const show = () => {
     win.show();
     win.focus();

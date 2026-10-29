@@ -1,16 +1,19 @@
 // The background trading bot: every N minutes it reads the market, asks Claude for one decision,
 // checks it (plan.ts) and executes it through the bridge, which enforces its own safety rules too.
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, rm, stat, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { botConfigSchema, DEFAULT_BOT_CONFIG, type BotState, type Decision } from "../../shared/bot-types";
 import type { BridgeClient } from "../../shared/bridge-client";
 import { appendJournal } from "../../shared/journal";
-import { decide } from "./decide";
-import { decideWithClaudeCode, findClaudeExe } from "./decide-claude-code";
+import { askClaude, ensureEngineReady } from "./ask-claude";
 import { planDecision, type Step } from "./plan";
 import { buildUserMessage } from "./prompt";
 import { loadApiKey } from "./secrets";
+import { StartRefused } from "./start-refused";
 
 const MAX_CONSECUTIVE_ERRORS = 3;
+const RESUME_ATTEMPTS = 30;
+const RESUME_RETRY_MS = 60_000;
 
 export class TradingBot {
   private state: BotState = { running: false, hasApiKey: false, config: DEFAULT_BOT_CONFIG, tradesThisSession: 0, costUsd: 0, calls: 0 };
@@ -19,15 +22,38 @@ export class TradingBot {
   private errors = 0;
   private readonly decisions: (Decision & { time: string })[] = [];
 
+  private readonly resumeFile: string;
+
   constructor(
     private readonly bridge: BridgeClient,
     private readonly configFile: string,
-  ) {}
+  ) {
+    this.resumeFile = join(dirname(configFile), "bot-resume.flag");
+  }
 
   async init(): Promise<void> {
     const saved = await readFile(this.configFile, "utf8").then((t) => botConfigSchema.safeParse(JSON.parse(t)), () => null);
     if (saved?.success) this.state.config = saved.data;
     this.state.hasApiKey = (await loadApiKey()) !== null;
+    if (await stat(this.resumeFile).then(() => true, () => false)) void this.resume(RESUME_ATTEMPTS);
+  }
+
+  /**
+   * The bot was running when the app quit (e.g. for an update): start it again. ATAS may still be
+   * starting, so unreachable-bridge errors are retried every minute; policy refusals end it at once.
+   */
+  private async resume(attemptsLeft: number): Promise<void> {
+    try {
+      await this.start({ auto: true });
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      if (error instanceof StartRefused || attemptsLeft <= 1) {
+        await rm(this.resumeFile, { force: true });
+        await this.log("Automatischer Start abgebrochen", reason, false);
+        return;
+      }
+      setTimeout(() => void this.resume(attemptsLeft - 1), RESUME_RETRY_MS);
+    }
   }
 
   getState = (): BotState => ({ ...this.state });
@@ -43,13 +69,14 @@ export class TradingBot {
     return this.getState();
   }
 
-  async start(): Promise<BotState> {
+  async start({ auto = false } = {}): Promise<BotState> {
     if (this.state.running) return this.getState();
-    if (this.state.config.engine === "api" && !(await loadApiKey())) throw new Error("Kein Anthropic-API-Schlüssel hinterlegt.");
-    if (this.state.config.engine === "claude-code") await findClaudeExe();
+    await ensureEngineReady(this.state.config.engine);
     const risk = await this.bridge.read("risk");
-    if (risk.isRealAccount && !this.state.config.allowLiveAccount) throw new Error(`Konto ${risk.account ?? ""} ist ein ECHTES Konto – in den Bot-Einstellungen ist Live nicht freigegeben.`);
-    if (risk.killSwitch) throw new Error("Not-Aus ist aktiv – erst freigeben.");
+    if (risk.isRealAccount && !this.state.config.allowLiveAccount) throw new StartRefused(`Konto ${risk.account ?? ""} ist ein ECHTES Konto – in den Bot-Einstellungen ist Live nicht freigegeben.`);
+    // An unattended restart never trades real money, even when live trading is allowed for manual starts.
+    if (auto && risk.isRealAccount) throw new StartRefused(`Konto ${risk.account ?? ""} ist ein ECHTES Konto – automatischer Start nur auf Demo.`);
+    if (risk.killSwitch) throw new StartRefused("Not-Aus ist aktiv – erst freigeben.");
     Object.assign(this.state, {
       running: true,
       startedAt: new Date().toISOString(),
@@ -63,13 +90,16 @@ export class TradingBot {
     });
     this.errors = 0;
     const engine = this.state.config.engine === "api" ? "API-Schlüssel" : "Claude Code (Abo)";
-    await this.log("Bot gestartet", `alle ${this.state.config.intervalMinutes} min · ${engine} · Konto ${risk.account ?? "?"}`, true);
+    await writeFile(this.resumeFile, new Date().toISOString());
+    await this.log(auto ? "Bot automatisch fortgesetzt" : "Bot gestartet", `alle ${this.state.config.intervalMinutes} min · ${engine} · Konto ${risk.account ?? "?"}`, true);
     this.schedule(0);
     return this.getState();
   }
 
-  async stop(reason = "manuell gestoppt"): Promise<BotState> {
+  /** keepResume: the app is only quitting (update/restart) – start again next launch. */
+  async stop(reason = "manuell gestoppt", { keepResume = false } = {}): Promise<BotState> {
     if (!this.state.running) return this.getState();
+    if (!keepResume) await rm(this.resumeFile, { force: true });
     clearTimeout(this.timer);
     Object.assign(this.state, { running: false, nextRunAt: undefined, stoppedReason: reason });
     await this.log("Bot gestoppt", reason, true);
@@ -123,13 +153,6 @@ export class TradingBot {
     }
   }
 
-  private async askClaude(message: string) {
-    if (this.state.config.engine === "claude-code") return decideWithClaudeCode(message);
-    const apiKey = await loadApiKey();
-    if (!apiKey) throw new Error("API-Schlüssel fehlt.");
-    return decide(apiKey, message);
-  }
-
   private async cycle(): Promise<void> {
     const [status, candles, quote, dom, position, orders, risk] = await Promise.all([
       this.bridge.read("status"), this.bridge.read("candles"), this.bridge.read("quote"), this.bridge.read("dom"),
@@ -146,7 +169,7 @@ export class TradingBot {
       maxTradesPerSession: this.state.config.maxTradesPerSession,
     });
 
-    const { decision, costUsd } = await this.askClaude(message);
+    const { decision, costUsd } = await askClaude(this.state.config.engine, message);
     const stamped = { ...decision, time: new Date().toISOString() };
     this.decisions.push(stamped);
     this.decisions.splice(0, Math.max(0, this.decisions.length - 20));

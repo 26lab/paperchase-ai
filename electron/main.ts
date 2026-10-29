@@ -69,10 +69,12 @@ app.on("ready", () => {
     const handler = Object.hasOwn(handlers, method) ? handlers[method as IpcMethod] : undefined;
     return handler ? handler(...args) : { ok: false, error: `Unbekannte Aktion: ${method}` };
   });
+  // Updates first: whatever fails later at startup, the app can still fetch a fixed version.
+  startAutoUpdate();
   void bot.init();
   keepRunningInTray(createWindow(), bot, join(resourcesDir, "icon.png"));
-  startAutoUpdate();
 });
 
-app.on("before-quit", () => void bot.stop("App beendet"));
+// Quitting (also for an update) keeps the resume flag, so a running bot comes back after restart.
+app.on("before-quit", () => void bot.stop("App beendet", { keepResume: true }));
 app.on("window-all-closed", () => app.quit());
