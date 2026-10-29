@@ -1,7 +1,7 @@
 {
   "name": "paperchase-ai",
   "productName": "PaperChase AI",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Desktop cockpit for trading ATAS with Claude, with safety rules built into the bridge.",
   "author": "26lab",
   "license": "UNLICENSED",
@@ -17,7 +17,7 @@
     "test": "vitest run",
     "check": "npm run lint && npm run typecheck && npm test",
     "bot:dry-run": "esbuild scripts/bot-dry-run.ts --bundle --platform=node --format=esm --outfile=dist-electron/bot-dry-run.mjs --log-level=warning && node dist-electron/bot-dry-run.mjs",
-    "backtest":"esbuild scripts/backtest.ts --bundle --platform=node --format=esm --outfile=dist-electron/backtest.mjs --log-level=warning && node dist-electron/backtest.mjs",
+    "backtest": "esbuild scripts/backtest.ts --bundle --platform=node --format=esm --outfile=dist-electron/backtest.mjs --log-level=warning && node dist-electron/backtest.mjs",
     "dist": "npm run check && npm run build && electron-builder --win nsis",
     "release": "npm run check && npm run build && electron-builder --win nsis --publish always"
   },
@@ -38,6 +38,8 @@
     "files": [
       "dist-electron/**",
       "!dist-electron/*.map",
+      "!dist-electron/backtest.mjs",
+      "!dist-electron/bot-dry-run.mjs",
       "out/**",
       "package.json"
     ],
