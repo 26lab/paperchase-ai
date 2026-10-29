@@ -18,6 +18,8 @@ Regeln:
 - Die Limits im Marktbild (Kontrakte pro Order, Tagesverlust, Kill-Switch) setzt das System hart durch –
   plane innerhalb davon. Ist tradingAllowed false, ist nur "hold", "close" oder "cancel_orders" sinnvoll.
 - Ticks: 1 Tick = tickSize Punkte. Rechne Stops über die ATR plausibel.
+- Der Datenfeed kann verzögert sein (Demo-Feeds meist ~15 Minuten). dataDelayMinutes zeigt die Verzögerung;
+  das ist normal und kein Datenfehler. Beurteile den Markt anhand der gelieferten Kerzen, alle Zeiten sind UTC.
 - Felder, die für deine Aktion nicht gelten, setzt du auf null.
 - reasoning: 2–4 kurze Sätze auf Deutsch, konkret mit Preisen/Werten aus dem Marktbild.`;
 
@@ -30,6 +32,16 @@ function atr(bars: Candle[], period = 14): number {
   });
   const recent = ranges.slice(-period);
   return recent.length > 0 ? recent.reduce((s, r) => s + r, 0) / recent.length : 0;
+}
+
+/** ATAS candle times are UTC without a zone suffix ("2026-10-29T14:35:00.0000000"). */
+const parseUtc = (time: string) => Date.parse(/[Zz]|[+-]\d\d:\d\d$/u.test(time) ? time : `${time}Z`);
+
+/** Minutes between the newest candle's start and now, minus the one minute the candle itself spans. */
+export function dataDelayMinutes(newestCandleTime: string | undefined, nowMs: number): number | null {
+  if (!newestCandleTime) return null;
+  const start = parseUtc(newestCandleTime);
+  return Number.isNaN(start) ? null : Math.max(0, Math.round((nowMs - start) / 60_000) - 1);
 }
 
 export interface SnapshotInput {
@@ -57,8 +69,11 @@ export function buildUserMessage(s: SnapshotInput): string {
     // [time, open, high, low, close, volume, delta, ema9, ema21]
     return [b.time.slice(11, 16), b.open, b.high, b.low, b.close, b.volume, b.delta, round(fast[idx] ?? 0), round(slow[idx] ?? 0)];
   });
+  const newest = (s.current ?? bars.at(-1))?.time;
   const snapshot = {
-    now: new Date().toISOString(),
+    timeUtc: new Date().toISOString().slice(0, 16),
+    newestCandleUtc: newest?.slice(0, 16) ?? null,
+    dataDelayMinutes: dataDelayMinutes(newest, Date.now()),
     symbol: s.symbol,
     tickSize: s.quote.tickSize,
     quote: { last: s.quote.last, bid: s.quote.bestBid, ask: s.quote.bestAsk, spread: s.quote.spread, domImbalancePct: round(((s.quote.cumBids - s.quote.cumAsks) / Math.max(1, s.quote.cumBids + s.quote.cumAsks)) * 100, 1) },
