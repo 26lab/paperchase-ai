@@ -16,7 +16,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "check": "npm run lint && npm run typecheck && npm test",
-    "backtest": "esbuild scripts/backtest.ts --bundle --platform=node --format=esm --outfile=dist-electron/backtest.mjs --log-level=warning && node dist-electron/backtest.mjs",
+    "bot:dry-run": "esbuild scripts/bot-dry-run.ts --bundle --platform=node --format=esm --outfile=dist-electron/bot-dry-run.mjs --log-level=warning && node dist-electron/bot-dry-run.mjs",
+    "backtest":"esbuild scripts/backtest.ts --bundle --platform=node --format=esm --outfile=dist-electron/backtest.mjs --log-level=warning && node dist-electron/backtest.mjs",
     "dist": "npm run check && npm run build && electron-builder --win nsis",
     "release": "npm run check && npm run build && electron-builder --win nsis --publish always"
   },

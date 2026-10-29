@@ -13,7 +13,7 @@ export interface DecisionResult {
   costUsd: number;
 }
 
-const HOLD = (reasoning: string): Decision => ({
+export const HOLD = (reasoning: string): Decision => ({
   action: "hold",
   reasoning,
   confidence: 0,

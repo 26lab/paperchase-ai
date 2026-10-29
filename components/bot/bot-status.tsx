@@ -40,7 +40,7 @@ export function BotStatus() {
           <Badge tone={bot.running ? "up" : "neutral"}>{bot.running ? "LÄUFT" : "GESTOPPT"}</Badge>
           <span className="text-sm text-muted">{bot.running ? `Nächste Prüfung in ${countdown}` : (bot.stoppedReason ?? "Bereit")}</span>
         </div>
-        <Button variant={bot.running ? "danger" : "buy"} onClick={() => void toggle()} disabled={!bot.hasApiKey}>
+        <Button variant={bot.running ? "danger" : "buy"} onClick={() => void toggle()} disabled={bot.config.engine === "api" && !bot.hasApiKey}>
           {bot.running ? <Square className="size-4" aria-hidden /> : <Play className="size-4" aria-hidden />}
           {bot.running ? "Bot stoppen" : "Bot starten"}
         </Button>
@@ -49,7 +49,7 @@ export function BotStatus() {
         <Stat label="Session-PnL"><span className={pnlText(bot.sessionPnl)}>{usd(bot.sessionPnl)}</span></Stat>
         <Stat label="Trades">{bot.tradesThisSession} / {bot.config.maxTradesPerSession}</Stat>
         <Stat label="Prüfungen">{bot.calls}</Stat>
-        <Stat label="Claude-Kosten">{bot.costUsd.toFixed(2)} $</Stat>
+        <Stat label={bot.config.engine === "api" ? "Claude-Kosten" : "Kosten (rechnerisch, Abo)"}>{bot.costUsd.toFixed(2)} $</Stat>
       </div>
       {d && (
         <div className="mt-4 rounded-xl border border-line p-3">

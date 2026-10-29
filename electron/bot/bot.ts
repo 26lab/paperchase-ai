@@ -5,6 +5,7 @@ import { botConfigSchema, DEFAULT_BOT_CONFIG, type BotState, type Decision } fro
 import type { BridgeClient } from "../../shared/bridge-client";
 import { appendJournal } from "../../shared/journal";
 import { decide } from "./decide";
+import { decideWithClaudeCode, findClaudeExe } from "./decide-claude-code";
 import { planDecision, type Step } from "./plan";
 import { buildUserMessage } from "./prompt";
 import { loadApiKey } from "./secrets";
@@ -44,7 +45,8 @@ export class TradingBot {
 
   async start(): Promise<BotState> {
     if (this.state.running) return this.getState();
-    if (!(await loadApiKey())) throw new Error("Kein Anthropic-API-Schlüssel hinterlegt.");
+    if (this.state.config.engine === "api" && !(await loadApiKey())) throw new Error("Kein Anthropic-API-Schlüssel hinterlegt.");
+    if (this.state.config.engine === "claude-code") await findClaudeExe();
     const risk = await this.bridge.read("risk");
     if (risk.isRealAccount && !this.state.config.allowLiveAccount) throw new Error(`Konto ${risk.account ?? ""} ist ein ECHTES Konto – in den Bot-Einstellungen ist Live nicht freigegeben.`);
     if (risk.killSwitch) throw new Error("Not-Aus ist aktiv – erst freigeben.");
@@ -60,7 +62,8 @@ export class TradingBot {
       error: undefined,
     });
     this.errors = 0;
-    await this.log("Bot gestartet", `alle ${this.state.config.intervalMinutes} min · Konto ${risk.account ?? "?"}`, true);
+    const engine = this.state.config.engine === "api" ? "API-Schlüssel" : "Claude Code (Abo)";
+    await this.log("Bot gestartet", `alle ${this.state.config.intervalMinutes} min · ${engine} · Konto ${risk.account ?? "?"}`, true);
     this.schedule(0);
     return this.getState();
   }
@@ -120,9 +123,14 @@ export class TradingBot {
     }
   }
 
-  private async cycle(): Promise<void> {
+  private async askClaude(message: string) {
+    if (this.state.config.engine === "claude-code") return decideWithClaudeCode(message);
     const apiKey = await loadApiKey();
     if (!apiKey) throw new Error("API-Schlüssel fehlt.");
+    return decide(apiKey, message);
+  }
+
+  private async cycle(): Promise<void> {
     const [status, candles, quote, dom, position, orders, risk] = await Promise.all([
       this.bridge.read("status"), this.bridge.read("candles"), this.bridge.read("quote"), this.bridge.read("dom"),
       this.bridge.read("position"), this.bridge.read("orders"), this.bridge.read("risk"),
@@ -138,7 +146,7 @@ export class TradingBot {
       maxTradesPerSession: this.state.config.maxTradesPerSession,
     });
 
-    const { decision, costUsd } = await decide(apiKey, message);
+    const { decision, costUsd } = await this.askClaude(message);
     const stamped = { ...decision, time: new Date().toISOString() };
     this.decisions.push(stamped);
     this.decisions.splice(0, Math.max(0, this.decisions.length - 20));

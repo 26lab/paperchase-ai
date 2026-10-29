@@ -4,8 +4,13 @@ import { useState } from "react";
 import { api } from "@/lib/api";
 import { useToast } from "@/lib/toast";
 import { botCall, useBot } from "@/lib/use-bot";
-import { DEFAULT_STRATEGY, type BotConfig } from "@/shared/bot-types";
-import { Stepper, Switch } from "../form";
+import { DEFAULT_STRATEGY, type BotConfig, type Engine } from "@/shared/bot-types";
+
+const ENGINE_OPTIONS = [
+  { value: "api", label: "API-Schlüssel" },
+  { value: "claude-code", label: "Claude Code (Abo)" },
+] as const satisfies readonly { value: Engine; label: string }[];
+import { Segmented, Stepper, Switch } from "../form";
 import { Panel } from "../page-header";
 import { Button } from "../ui";
 
@@ -20,6 +25,19 @@ function NumberRow({ id, label, hint, value, onChange, min, max }: { id: string;
         <span className="block text-xs font-normal text-dim">{hint}</span>
       </label>
       <Stepper id={id} value={value} onChange={onChange} step={1} min={min} max={max} />
+    </div>
+  );
+}
+
+function EngineChoice({ value, onChange }: { value: Engine; onChange: (v: Engine) => void }) {
+  return (
+    <div>
+      <Segmented label="Claude-Zugang" options={ENGINE_OPTIONS} value={value} onChange={onChange} />
+      <p className="mt-1.5 text-xs text-dim">
+        {value === "api"
+          ? "API-Schlüssel: Abrechnung über Guthaben in der Anthropic-Konsole."
+          : "Claude Code (Abo): nutzt dein installiertes Claude Code und dein Abo-Kontingent – keine Zusatzkosten, aber jedes Intervall zählt gegen dein Limit."}
+      </p>
     </div>
   );
 }
@@ -40,7 +58,8 @@ export function BotConfigPanel() {
   return (
     <Panel title="Einstellungen">
       <div className="flex flex-col gap-3">
-        <NumberRow id="bot-interval" label="Prüfintervall" hint={`Minuten · ca. ${perHour.toFixed(2)} $/h Claude-Kosten`} value={draft.intervalMinutes} onChange={(v) => set("intervalMinutes", v)} min={1} max={60} />
+        <EngineChoice value={draft.engine} onChange={(v) => set("engine", v)} />
+        <NumberRow id="bot-interval" label="Prüfintervall" hint={draft.engine === "api" ? `Minuten · ca. ${perHour.toFixed(2)} $/h Claude-Kosten` : `Minuten · ${Math.round(60 / Math.max(1, draft.intervalMinutes))} Abfragen pro Stunde`} value={draft.intervalMinutes} onChange={(v) => set("intervalMinutes", v)} min={1} max={60} />
         <NumberRow id="bot-trades" label="Max. Trades pro Session" hint="danach nur noch schließen" value={draft.maxTradesPerSession} onChange={(v) => set("maxTradesPerSession", v)} min={1} max={50} />
         <NumberRow id="bot-loss" label="Session-Verluststopp ($)" hint="Bot schließt alles und stoppt" value={draft.sessionLossStop} onChange={(v) => set("sessionLossStop", v)} min={10} max={100_000} />
         <div className="flex items-center justify-between gap-3">

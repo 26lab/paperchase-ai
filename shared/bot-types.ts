@@ -8,7 +8,12 @@ export const DEFAULT_STRATEGY = `Trendfolge im NQ auf 1-Minuten-Kerzen.
 - Stop 40 Ticks, Ziel 80 Ticks; bei klarer Gegenbewegung (Gegen-Cross, starkes Gegen-Delta) früher schließen.
 - Lieber auslassen als ein unklares Setup handeln.`;
 
+export const ENGINES = ["api", "claude-code"] as const;
+export type Engine = (typeof ENGINES)[number];
+
 export const botConfigSchema = z.object({
+  /** api = Anthropic API key (prepaid credits); claude-code = the installed Claude Code CLI (subscription). */
+  engine: z.enum(ENGINES).default("api"),
   intervalMinutes: z.number().int().min(1).max(60),
   strategy: z.string().min(20).max(4000),
   maxTradesPerSession: z.number().int().min(1).max(50),
@@ -20,6 +25,7 @@ export const botConfigSchema = z.object({
 export type BotConfig = z.infer<typeof botConfigSchema>;
 
 export const DEFAULT_BOT_CONFIG: BotConfig = {
+  engine: "api",
   intervalMinutes: 5,
   strategy: DEFAULT_STRATEGY,
   maxTradesPerSession: 5,
