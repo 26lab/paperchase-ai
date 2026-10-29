@@ -11,6 +11,53 @@ export const DEFAULT_STRATEGY = `Trendfolge im NQ auf 1-Minuten-Kerzen.
 export const ENGINES = ["api", "claude-code"] as const;
 export type Engine = (typeof ENGINES)[number];
 
+export const RISK_LEVELS = ["safe", "balanced", "gamble"] as const;
+export type RiskLevel = (typeof RISK_LEVELS)[number];
+
+export interface RiskProfile {
+  label: string;
+  hint: string;
+  /** Enforced in plan.ts: weaker or wider-stopped entries are refused. */
+  minConfidence: number;
+  maxStopTicks: number;
+  /** Defaults the UI fills in when the level is picked; still editable. */
+  maxTradesPerSession: number;
+  sessionLossStop: number;
+  /** Sent to Claude with the strategy. */
+  note: string;
+}
+
+/** The bridge limits in ATAS (contracts per order, daily loss) stay hard caps on every level. */
+export const RISK_PROFILES: Record<RiskLevel, RiskProfile> = {
+  safe: {
+    label: "Sicher",
+    hint: "Nur Lehrbuch-Setups ab 75 % Sicherheit, Stop max. 40 Ticks, 3 Trades, Stopp bei -150 $.",
+    minConfidence: 0.75,
+    maxStopTicks: 40,
+    maxTradesPerSession: 3,
+    sessionLossStop: 150,
+    note: "Sicher: nur Setups, bei denen alle Bedingungen der Strategie klar erfüllt sind, Chance/Risiko mindestens 1:2. Bei jedem Zweifel hold. Offene Positionen bei erster klarer Gegenbewegung schließen.",
+  },
+  balanced: {
+    label: "Mit Bedacht",
+    hint: "Strategie wie beschrieben ab 60 % Sicherheit, Stop max. 80 Ticks, 5 Trades, Stopp bei -300 $.",
+    minConfidence: 0.6,
+    maxStopTicks: 80,
+    maxTradesPerSession: 5,
+    sessionLossStop: 300,
+    note: "Mit Bedacht: handle die Strategie wie beschrieben; unklare Setups auslassen.",
+  },
+  gamble: {
+    label: "Gamble",
+    hint: "Auch knappe Setups und Umkehr-Trades ab 40 % Sicherheit, Stop max. 160 Ticks, 10 Trades, Stopp bei -500 $.",
+    minConfidence: 0.4,
+    maxStopTicks: 160,
+    maxTradesPerSession: 10,
+    sessionLossStop: 500,
+    note: "Gamble: aggressiv – auch Setups mit nur teilweiser Bestätigung, frühe Einstiege und Umkehr-Trades an klaren Marken sind erlaubt. Ein Stop bleibt Pflicht.",
+  },
+};
+
 export const botConfigSchema = z.object({
   /** api = Anthropic API key (prepaid credits); claude-code = the installed Claude Code CLI (subscription). */
   engine: z.enum(ENGINES).default("api"),
@@ -21,6 +68,7 @@ export const botConfigSchema = z.object({
   sessionLossStop: z.number().min(10).max(100_000),
   /** Off: the bot refuses to run on an account ATAS reports as real. */
   allowLiveAccount: z.boolean(),
+  riskLevel: z.enum(RISK_LEVELS).default("balanced"),
 });
 export type BotConfig = z.infer<typeof botConfigSchema>;
 
@@ -31,6 +79,7 @@ export const DEFAULT_BOT_CONFIG: BotConfig = {
   maxTradesPerSession: 5,
   sessionLossStop: 300,
   allowLiveAccount: false,
+  riskLevel: "balanced",
 };
 
 export const LEVEL_KINDS = ["support", "resistance", "entry_zone", "target_zone", "invalidation"] as const;

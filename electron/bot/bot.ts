@@ -2,7 +2,7 @@
 // checks it (plan.ts) and executes it through the bridge, which enforces its own safety rules too.
 import { readFile, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { botConfigSchema, DEFAULT_BOT_CONFIG, type BotMarker, type BotState, type Decision } from "../../shared/bot-types";
+import { botConfigSchema, DEFAULT_BOT_CONFIG, RISK_PROFILES, type BotMarker, type BotState, type Decision } from "../../shared/bot-types";
 import type { BridgeClient } from "../../shared/bridge-client";
 import { appendJournal } from "../../shared/journal";
 import { askClaude, ensureEngineReady } from "./ask-claude";
@@ -91,7 +91,7 @@ export class TradingBot {
     this.errors = 0;
     const engine = this.state.config.engine === "api" ? "API-Schlüssel" : "Claude Code (Abo)";
     await writeFile(this.resumeFile, new Date().toISOString());
-    await this.log(auto ? "Bot automatisch fortgesetzt" : "Bot gestartet", `alle ${this.state.config.intervalMinutes} min · ${engine} · Konto ${risk.account ?? "?"}`, true);
+    await this.log(auto ? "Bot automatisch fortgesetzt" : "Bot gestartet", `alle ${this.state.config.intervalMinutes} min · ${engine} · ${RISK_PROFILES[this.state.config.riskLevel].label} · Konto ${risk.account ?? "?"}`, true);
     this.schedule(0);
     return this.getState();
   }
@@ -158,12 +158,14 @@ export class TradingBot {
       this.bridge.read("status"), this.bridge.read("candles"), this.bridge.read("quote"), this.bridge.read("dom"),
       this.bridge.read("position"), this.bridge.read("orders"), this.bridge.read("risk"),
     ]);
+    const profile = RISK_PROFILES[this.state.config.riskLevel];
     const message = buildUserMessage({
       symbol: status.symbol ?? "?",
       candles: candles.candles,
       current: candles.current,
       quote, dom, position, orders, risk,
       strategy: this.state.config.strategy,
+      riskNote: profile.note,
       recentDecisions: this.decisions,
       tradesThisSession: this.state.tradesThisSession,
       maxTradesPerSession: this.state.config.maxTradesPerSession,
@@ -181,6 +183,8 @@ export class TradingBot {
       tradesThisSession: this.state.tradesThisSession,
       maxTradesPerSession: this.state.config.maxTradesPerSession,
       maxOrderQty: risk.limits.maxOrderQty,
+      minConfidence: profile.minConfidence,
+      maxStopTicks: profile.maxStopTicks,
     });
     const newestCandle = (candles.current ?? candles.candles.at(-1))?.time ?? "";
     await this.execute(step, decision, newestCandle);

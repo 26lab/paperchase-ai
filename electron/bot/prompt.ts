@@ -58,6 +58,8 @@ export interface SnapshotInput {
   orders: Order[];
   risk: Risk;
   strategy: string;
+  /** RISK_PROFILES[level].note */
+  riskNote: string;
   recentDecisions: (Decision & { time: string })[];
   tradesThisSession: number;
   maxTradesPerSession: number;
@@ -99,5 +101,5 @@ export function buildUserMessage(s: SnapshotInput): string {
     session: { tradesSoFar: s.tradesThisSession, maxTrades: s.maxTradesPerSession },
     yourLastDecisions: s.recentDecisions.slice(-5).map((d) => ({ time: d.time.slice(11, 16), action: d.action, direction: d.direction, reasoning: d.reasoning })),
   };
-  return `Strategie des Nutzers:\n${s.strategy}\n\nMarktbild (JSON):\n${JSON.stringify(snapshot)}`;
+  return `Strategie des Nutzers:\n${s.strategy}\n\nRisikostufe – ${s.riskNote}\n\nMarktbild (JSON):\n${JSON.stringify(snapshot)}`;
 }

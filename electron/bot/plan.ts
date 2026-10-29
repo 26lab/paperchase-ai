@@ -9,6 +9,9 @@ export interface PlanContext {
   tradesThisSession: number;
   maxTradesPerSession: number;
   maxOrderQty: number;
+  /** From the risk level. */
+  minConfidence: number;
+  maxStopTicks: number;
 }
 
 export type Step =
@@ -23,6 +26,8 @@ function planOpen(d: Decision, ctx: PlanContext): Step {
   if (ctx.tradesThisSession >= ctx.maxTradesPerSession) return { kind: "refused", reason: `Maximal ${ctx.maxTradesPerSession} Trades pro Session erreicht.` };
   if (!d.direction) return { kind: "refused", reason: "open ohne Richtung." };
   if (!d.stop_loss_ticks) return { kind: "refused", reason: "open ohne Stop-Loss – jede Position braucht einen Stop." };
+  if (d.confidence < ctx.minConfidence) return { kind: "refused", reason: `Sicherheit ${Math.round(d.confidence * 100)} % < ${Math.round(ctx.minConfidence * 100)} % der Risikostufe.` };
+  if (d.stop_loss_ticks > ctx.maxStopTicks) return { kind: "refused", reason: `Stop ${d.stop_loss_ticks} Ticks > ${ctx.maxStopTicks} der Risikostufe.` };
   const qty = d.quantity ?? 1;
   if (qty > ctx.maxOrderQty) return { kind: "refused", reason: `${qty} Kontrakte > erlaubte ${ctx.maxOrderQty} pro Order.` };
   return {

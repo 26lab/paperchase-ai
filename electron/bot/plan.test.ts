@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import type { Decision } from "../../shared/bot-types";
 import { planDecision, type PlanContext } from "./plan";
 
-const flat: PlanContext = { position: 0, activeOrders: 0, tradesThisSession: 0, maxTradesPerSession: 5, maxOrderQty: 1 };
+const flat: PlanContext = { position: 0, activeOrders: 0, tradesThisSession: 0, maxTradesPerSession: 5, maxOrderQty: 1, minConfidence: 0.6, maxStopTicks: 80 };
 const base: Decision = { action: "hold", reasoning: "test", confidence: 0.5, direction: null, quantity: null, stop_loss_ticks: null, take_profit_ticks: null, levels: [] };
-const open = (patch: Partial<Decision>): Decision => ({ ...base, action: "open", direction: "buy", quantity: 1, stop_loss_ticks: 40, take_profit_ticks: 80, ...patch });
+const open = (patch: Partial<Decision>): Decision => ({ ...base, action: "open", confidence: 0.7, direction: "buy", quantity: 1, stop_loss_ticks: 40, take_profit_ticks: 80, ...patch });
 
 describe("planDecision", () => {
   it("turns a valid open into a bracketed market order", () => {
@@ -35,6 +35,11 @@ describe("planDecision", () => {
     expect(planDecision({ ...base, action: "close" }, { ...flat, position: -1 })).toEqual({ kind: "close" });
     expect(planDecision({ ...base, action: "cancel_orders" }, flat)).toEqual({ kind: "none" });
     expect(planDecision({ ...base, action: "cancel_orders" }, { ...flat, activeOrders: 2 })).toEqual({ kind: "cancel" });
+  });
+
+  it("refuses entries below the risk level's confidence or above its stop", () => {
+    expect(planDecision(open({ confidence: 0.5 }), flat)).toMatchObject({ kind: "refused", reason: expect.stringMatching(/50 % < 60 %/u) });
+    expect(planDecision(open({ stop_loss_ticks: 120 }), flat)).toMatchObject({ kind: "refused", reason: expect.stringMatching(/120 Ticks/u) });
   });
 
   it("does nothing on hold", () => {
