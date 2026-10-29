@@ -2,7 +2,7 @@
 // checks it (plan.ts) and executes it through the bridge, which enforces its own safety rules too.
 import { readFile, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { botConfigSchema, DEFAULT_BOT_CONFIG, type BotState, type Decision } from "../../shared/bot-types";
+import { botConfigSchema, DEFAULT_BOT_CONFIG, type BotMarker, type BotState, type Decision } from "../../shared/bot-types";
 import type { BridgeClient } from "../../shared/bridge-client";
 import { appendJournal } from "../../shared/journal";
 import { askClaude, ensureEngineReady } from "./ask-claude";
@@ -16,7 +16,7 @@ const RESUME_ATTEMPTS = 30;
 const RESUME_RETRY_MS = 60_000;
 
 export class TradingBot {
-  private state: BotState = { running: false, hasApiKey: false, config: DEFAULT_BOT_CONFIG, tradesThisSession: 0, costUsd: 0, calls: 0 };
+  private state: BotState = { running: false, hasApiKey: false, config: DEFAULT_BOT_CONFIG, tradesThisSession: 0, costUsd: 0, calls: 0, markers: [] };
   private timer: ReturnType<typeof setTimeout> | undefined;
   private busy = false;
   private errors = 0;
@@ -182,10 +182,16 @@ export class TradingBot {
       maxTradesPerSession: this.state.config.maxTradesPerSession,
       maxOrderQty: risk.limits.maxOrderQty,
     });
-    await this.execute(step, decision);
+    const newestCandle = (candles.current ?? candles.candles.at(-1))?.time ?? "";
+    await this.execute(step, decision, newestCandle);
   }
 
-  private async execute(step: Step, d: Decision): Promise<void> {
+  private mark(candleTime: string, kind: BotMarker["kind"], text: string): void {
+    if (!candleTime) return;
+    this.state.markers = [...this.state.markers, { candleTime, kind, text }].slice(-50);
+  }
+
+  private async execute(step: Step, d: Decision, candleTime: string): Promise<void> {
     const why = `${d.reasoning} (Sicherheit ${Math.round(d.confidence * 100)} %)`;
     switch (step.kind) {
       case "none":
@@ -202,11 +208,13 @@ export class TradingBot {
         });
         if (!r) return;
         this.state.tradesThisSession++;
+        this.mark(candleTime, step.order.direction === "buy" ? "long" : "short", d.reasoning.split(/[.:]/u)[0]?.slice(0, 40) ?? "");
         await this.log(`Einstieg ${step.order.direction === "buy" ? "LONG" : "SHORT"}`, `${step.order.qty} Market · SL ${r.stopLoss || "–"} · TP ${r.takeProfit || "–"} – ${why}`, true);
         return;
       }
       case "close":
         await this.bridge.closePosition();
+        this.mark(candleTime, "close", "Schließen");
         await this.log("Position geschlossen", why, true);
         return;
       case "cancel":

@@ -4,14 +4,18 @@ import {
   CandlestickSeries,
   ColorType,
   createChart,
+  createSeriesMarkers,
   HistogramSeries,
   LineStyle,
   type IChartApi,
   type IPriceLine,
   type ISeriesApi,
+  type ISeriesMarkersPluginApi,
+  type Time,
   type UTCTimestamp,
 } from "lightweight-charts";
 import { useEffect, useRef, type RefObject } from "react";
+import type { BotMarker, Level } from "@/shared/bot-types";
 import type { Candle, Candles, Order, Position } from "@/shared/types";
 
 interface ChartHandles {
@@ -22,7 +26,8 @@ interface ChartHandles {
 
 // Lightweight Charts renders in UTC; shift by the local offset so the axis shows wall-clock time.
 const TZ_SHIFT = -new Date().getTimezoneOffset() * 60;
-const toTime = (c: Candle) => (Math.floor(Date.parse(c.time) / 1000) + TZ_SHIFT) as UTCTimestamp;
+const timeOf = (iso: string) => (Math.floor(Date.parse(iso) / 1000) + TZ_SHIFT) as UTCTimestamp;
+const toTime = (c: Candle) => timeOf(c.time);
 const toBar = (c: Candle) => ({ time: toTime(c), open: c.open, high: c.high, low: c.low, close: c.close });
 const toVolume = (c: Candle) => ({ time: toTime(c), value: c.volume, color: c.close >= c.open ? "rgba(31,224,124,.35)" : "rgba(255,77,94,.35)" });
 
@@ -68,6 +73,47 @@ export function useCandleData(chart: RefObject<ChartHandles | null>, candles: Ca
     c.volume.setData(unique.map((b) => toVolume(b)));
     barCount.current = unique.length;
   }, [chart, candles]);
+}
+
+const LEVEL_STYLE: Record<Level["kind"], { color: string; style: LineStyle }> = {
+  support: { color: "#2dd4bf", style: LineStyle.Solid },
+  resistance: { color: "#fb923c", style: LineStyle.Solid },
+  entry_zone: { color: "#ffc04d", style: LineStyle.Dotted },
+  target_zone: { color: "#1fe07c", style: LineStyle.Dotted },
+  invalidation: { color: "#c084fc", style: LineStyle.LargeDashed },
+};
+
+const MARKER_STYLE = {
+  long: { shape: "arrowUp", position: "belowBar", color: "#1fe07c" },
+  short: { shape: "arrowDown", position: "aboveBar", color: "#ff4d5e" },
+  close: { shape: "circle", position: "aboveBar", color: "#8aa79f" },
+} as const;
+
+/** Claude's levels (lines, zones as two edges) and the bot's entry/exit arrows. */
+export function useClaudeOverlay(chart: RefObject<ChartHandles | null>, levels: Level[], markers: BotMarker[], visible: boolean) {
+  const lines = useRef<IPriceLine[]>([]);
+  const plugin = useRef<ISeriesMarkersPluginApi<Time> | null>(null);
+  useEffect(() => {
+    const c = chart.current;
+    if (!c) return;
+    for (const line of lines.current) c.price.removePriceLine(line);
+    lines.current = [];
+    plugin.current ??= createSeriesMarkers(c.price);
+    plugin.current.setMarkers(
+      visible
+        ? markers.map((m) => ({ time: timeOf(m.candleTime), text: m.text, ...MARKER_STYLE[m.kind] })).toSorted((a, b) => a.time - b.time)
+        : [],
+    );
+    if (!visible) return;
+    for (const level of levels) {
+      const { color, style } = LEVEL_STYLE[level.kind];
+      const edges = level.price_high === null ? [level.price] : [level.price, level.price_high];
+      for (const [index, price] of edges.entries()) {
+        const title = index === 0 ? level.label : "";
+        lines.current.push(c.price.createPriceLine({ price, color, lineWidth: 1, lineStyle: style, axisLabelVisible: index === 0, title }));
+      }
+    }
+  }, [chart, levels, markers, visible]);
 }
 
 /** Dashed lines for the entry and every working order (SL red, TP green, others amber). */

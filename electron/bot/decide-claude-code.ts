@@ -24,7 +24,7 @@ let cachedExe: string | undefined;
 
 /**
  * Older CLI versions ignore --json-schema and answer with the JSON as (fenced) text.
- * The result still goes through decisionSchema; only a missing confidence gets a neutral default.
+ * The result still goes through decisionSchema; only a missing confidence or levels list gets a neutral default.
  */
 export function jsonFromText(text: string): unknown {
   const start = text.indexOf("{");
@@ -32,7 +32,7 @@ export function jsonFromText(text: string): unknown {
   if (start === -1 || end <= start) return null;
   try {
     const value: unknown = JSON.parse(text.slice(start, end + 1));
-    return typeof value === "object" && value !== null ? { confidence: 0.5, ...value } : null;
+    return typeof value === "object" && value !== null ? { confidence: 0.5, levels: [], ...value } : null;
   } catch {
     return null;
   }

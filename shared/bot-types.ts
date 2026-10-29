@@ -33,6 +33,24 @@ export const DEFAULT_BOT_CONFIG: BotConfig = {
   allowLiveAccount: false,
 };
 
+export const LEVEL_KINDS = ["support", "resistance", "entry_zone", "target_zone", "invalidation"] as const;
+
+/** A price level or zone Claude sees; drawn on the PaperChase chart. */
+export const levelSchema = z.object({
+  kind: z.enum(LEVEL_KINDS),
+  price: z.number().describe("Linie, bzw. untere Kante einer Zone"),
+  price_high: z.number().nullable().describe("obere Kante bei Zonen, sonst null"),
+  label: z.string().describe("2-5 Wörter, z. B. 'Widerstand Hochs 14:05'"),
+});
+export type Level = z.infer<typeof levelSchema>;
+
+/** Arrow on the chart where the bot acted. candleTime is the newest candle Claude saw. */
+export interface BotMarker {
+  candleTime: string;
+  kind: "long" | "short" | "close";
+  text: string;
+}
+
 /** What Claude must answer each cycle (structured output, every field present; unused ones null). */
 export const decisionSchema = z.object({
   action: z.enum(["hold", "open", "close", "cancel_orders"]),
@@ -44,6 +62,7 @@ export const decisionSchema = z.object({
   quantity: z.number().int().min(1).nullable().describe("nur bei open, Kontrakte"),
   stop_loss_ticks: z.number().int().min(4).max(400).nullable().describe("Pflicht bei open"),
   take_profit_ticks: z.number().int().min(4).max(800).nullable().describe("optional bei open"),
+  levels: z.array(levelSchema).max(6).describe("bis zu 6 Marken, die deine Entscheidung tragen"),
 });
 export type Decision = z.infer<typeof decisionSchema>;
 
@@ -55,6 +74,8 @@ export interface BotState {
   lastRunAt?: string;
   nextRunAt?: string;
   lastDecision?: Decision & { time: string };
+  /** Entries and exits of this run, newest last (max 50). */
+  markers: BotMarker[];
   tradesThisSession: number;
   /** Bridge session PnL when the bot was started; the loss stop is measured from here. */
   sessionPnlAtStart?: number;

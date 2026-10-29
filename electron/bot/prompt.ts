@@ -21,7 +21,11 @@ Regeln:
 - Der Datenfeed kann verzögert sein (Demo-Feeds meist ~15 Minuten). dataDelayMinutes zeigt die Verzögerung;
   das ist normal und kein Datenfehler. Beurteile den Markt anhand der gelieferten Kerzen, alle Zeiten sind UTC.
 - Felder, die für deine Aktion nicht gelten, setzt du auf null.
-- reasoning: 2–4 kurze Sätze auf Deutsch, konkret mit Preisen/Werten aus dem Marktbild.`;
+- reasoning: 2–4 kurze Sätze auf Deutsch, konkret mit Preisen/Werten aus dem Marktbild.
+- levels: bei jeder Prüfung bis zu 6 Marken, die deine Entscheidung tragen – nur echte, aus den Kerzen
+  ableitbare Preise. kind: support/resistance (Linie), entry_zone/target_zone (Zone: price = untere,
+  price_high = obere Kante), invalidation (Preis, ab dem dein Szenario nicht mehr gilt). label: 2–5 Wörter.
+  Sie werden dem Nutzer im Chart eingezeichnet.`;
 
 const round = (v: number, d = 2) => Math.round(v * 10 ** d) / 10 ** d;
 

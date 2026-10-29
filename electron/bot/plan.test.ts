@@ -3,7 +3,7 @@ import type { Decision } from "../../shared/bot-types";
 import { planDecision, type PlanContext } from "./plan";
 
 const flat: PlanContext = { position: 0, activeOrders: 0, tradesThisSession: 0, maxTradesPerSession: 5, maxOrderQty: 1 };
-const base: Decision = { action: "hold", reasoning: "test", confidence: 0.5, direction: null, quantity: null, stop_loss_ticks: null, take_profit_ticks: null };
+const base: Decision = { action: "hold", reasoning: "test", confidence: 0.5, direction: null, quantity: null, stop_loss_ticks: null, take_profit_ticks: null, levels: [] };
 const open = (patch: Partial<Decision>): Decision => ({ ...base, action: "open", direction: "buy", quantity: 1, stop_loss_ticks: 40, take_profit_ticks: 80, ...patch });
 
 describe("planDecision", () => {

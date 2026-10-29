@@ -21,6 +21,7 @@ export const HOLD = (reasoning: string): Decision => ({
   quantity: null,
   stop_loss_ticks: null,
   take_profit_ticks: null,
+  levels: [],
 });
 
 export async function decide(apiKey: string, userMessage: string): Promise<DecisionResult> {

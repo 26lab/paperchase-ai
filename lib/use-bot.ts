@@ -6,7 +6,7 @@ import type { Result } from "@/shared/ipc";
 import { api, inApp } from "./api";
 import { createPollStore } from "./poll-store";
 
-const INITIAL: BotState = { running: false, hasApiKey: false, config: DEFAULT_BOT_CONFIG, tradesThisSession: 0, costUsd: 0, calls: 0 };
+const INITIAL: BotState = { running: false, hasApiKey: false, config: DEFAULT_BOT_CONFIG, tradesThisSession: 0, costUsd: 0, calls: 0, markers: [] };
 
 const store = createPollStore<BotState>(async () => {
   if (!inApp()) return;
