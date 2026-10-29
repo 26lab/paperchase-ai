@@ -1,7 +1,7 @@
 {
   "name": "paperchase-ai",
   "productName": "PaperChase AI",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Desktop cockpit for trading ATAS with Claude, with safety rules built into the bridge.",
   "author": "26lab",
   "license": "UNLICENSED",
