@@ -1,0 +1,98 @@
+@import "tailwindcss";
+@import "react-grid-layout/css/styles.css";
+
+@theme {
+  --color-ink: #050d0b;
+  --color-ink-2: #08130f;
+  --color-panel: #0c1c18;
+  --color-panel-2: #102520;
+  --color-line: #1a332c;
+  --color-line-2: #24463d;
+  --color-fg: #e6f2ee;
+  --color-muted: #8aa79f;
+  --color-dim: #57746c;
+  --color-up: #1fe07c;
+  --color-up-2: #12b863;
+  --color-down: #ff4d5e;
+  --color-down-2: #d9364a;
+  --color-amber: #ffc04d;
+
+  --font-sans: var(--font-hanken), ui-sans-serif, sans-serif;
+  --font-display: var(--font-chakra), ui-sans-serif, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  --radius-tile: 18px;
+  --shadow-glow: 0 0 0 1px rgb(31 224 124 / 0.14), 0 18px 50px -18px rgb(31 224 124 / 0.35);
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+  html,
+  body {
+    height: 100%;
+    background: var(--color-ink);
+    color: var(--color-fg);
+  }
+  body {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-up);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: rgb(31 224 124 / 0.3);
+  }
+  input[type="number"]::-webkit-inner-spin-button {
+    appearance: none;
+  }
+}
+
+@utility tabular {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+@utility drag-region {
+  -webkit-app-region: drag;
+}
+
+@utility no-drag {
+  -webkit-app-region: no-drag;
+}
+
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-2) transparent;
+}
+
+/* react-grid-layout: themed placeholder + resize handle */
+.react-grid-item.react-grid-placeholder {
+  background: rgb(31 224 124 / 0.12);
+  border: 1px dashed rgb(31 224 124 / 0.5);
+  border-radius: var(--radius-tile);
+  opacity: 1;
+}
+.react-grid-item.react-draggable-dragging,
+.react-grid-item.resizing {
+  user-select: none;
+}
+.react-grid-item > .react-resizable-handle::after {
+  border-color: var(--color-dim);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

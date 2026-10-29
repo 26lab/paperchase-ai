@@ -1,0 +1,77 @@
+{
+  "name": "paperchase-ai",
+  "productName": "PaperChase AI",
+  "version": "1.0.0",
+  "description": "Desktop cockpit for trading ATAS with Claude, with safety rules built into the bridge.",
+  "author": "26lab",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "next build && node scripts/build-electron.mjs",
+    "start": "electron .",
+    "lint": "oxlint --deny-warnings",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check": "npm run lint && npm run typecheck && npm test",
+    "backtest": "esbuild scripts/backtest.ts --bundle --platform=node --format=esm --outfile=dist-electron/backtest.mjs --log-level=warning && node dist-electron/backtest.mjs",
+    "dist": "npm run check && npm run build && electron-builder --win nsis"
+  },
+  "build": {
+    "appId": "io.26lab.paperchase",
+    "productName": "PaperChase AI",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist-electron/**",
+      "!dist-electron/*.map",
+      "out/**",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "dist-electron/mcp.mjs"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/bridge",
+        "to": "bridge"
+      }
+    ],
+    "icon": "resources/icon.png",
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "include": "resources/installer.nsh"
+    }
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "@oxlint/binding-win32-x64-msvc": "^1.90.0",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "electron": "^45.1.0",
+    "electron-builder": "^26.18.0",
+    "esbuild": "^0.28.2",
+    "lightweight-charts": "^5.2.1",
+    "lucide-react": "^1.64.0",
+    "motion": "^14.7.1",
+    "next": "^16.4.3",
+    "oxlint": "^1.90.0",
+    "postcss": "^8.5.32",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-grid-layout": "^2.3.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
+    "vitest": "^3.2.7",
+    "zod": "^4.6.7"
+  }
+}
