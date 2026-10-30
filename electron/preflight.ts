@@ -71,7 +71,7 @@ async function checkBridge(client: BridgeClient): Promise<CheckResult[]> {
     return [
       started
         ? { ...active, state: "ok", detail: `${status.symbol ?? "?"} · Port ${status.port}` }
-        : { ...active, state: "error", detail: `Strategie ist „${status.state}“. Auf dem Chart über „MCP Bridge“ fahren und Play klicken.` },
+        : { ...active, state: "error", detail: `Strategie ist „${status.state}“. Sie startet von selbst, sobald ATAS den Chart geladen hat – sonst auf dem Chart über „MCP Bridge“ fahren und Play klicken.` },
       risk.isRealAccount
         ? { ...account, state: "warn", detail: `${risk.account ?? "?"} ist ein ECHTES Konto.` }
         : { ...account, state: "ok", detail: `${risk.account ?? "?"} (Demo)` },

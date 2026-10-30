@@ -18,7 +18,7 @@ export function createFixes(env: PreflightEnv): Record<FixId, () => Promise<stri
     "install-bridge-dll": async () => {
       await mkdir(dirname(env.installedDll), { recursive: true });
       await copyFile(env.bundledDll, env.installedDll);
-      return "Bridge kopiert. In ATAS unten rechts in der Statusleiste „Strategien neu laden“ klicken, dann die Strategie starten.";
+      return "Bridge kopiert. In ATAS unten rechts in der Statusleiste „Strategien neu laden“ klicken – die Bridge startet danach von selbst.";
     },
     "register-mcp": async () => {
       await registerMcp(env);
